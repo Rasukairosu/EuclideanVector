@@ -6,7 +6,8 @@
 //  | |___ | |_| || (__ \ \_/ /|  __/| (__ | |_ | (_) || |    | \__/\  |_|    |_|
 //  \____/  \__,_| \___| \___/  \___| \___| \__| \___/ |_|     \____/
 //
-//	
+//	GitHub : https://github.com/Rasukairosu/EuclideanVector.git//
+// 
 //	2024/10/22~
 //
 //	Author : Hiyu Taninaka
