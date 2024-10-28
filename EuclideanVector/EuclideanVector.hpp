@@ -16,8 +16,8 @@
 //	-Japanese-
 // 
 //	"EuclideanVector"シリーズは1～4次元までのベクトルを表現できるクラスです。
-//	このクラスは再帰的にデータを保持しており、より低次元のベクトル型へ素早く変換できるため、
-//	特に配列として扱う場合には注意が必要です（メモリレイアウトが定まっていないため）。
+//	このクラスは再帰的にデータを保持しており、より低次元のベクトル型へ素早く変換できます。
+//	しかし、この特性から配列として扱う場合には注意が必要です（メモリレイアウトが定まっていないため）。
 //	
 //	メンバ変数へのアクセスには x(), y(), z(), w() を使用し、
 //	低次元のベクトル型への変換には xy(), xyz() などを呼び出します。
@@ -34,7 +34,7 @@
 //	一方、EuclideanVector はインスタンスの構築に時間がかかるため、なるべくインスタンスの生成を避けるべきです。
 //	メソッドの戻り値などで EuclideanVector を返す場合は、左辺値参照を返すことが推奨されます。
 //	
-//	値を一括して入力したい場合は、v = EuclideanVector<T>(...) よりも set(...) を使用することでオーバーヘッドを削減できます。
+//	値を一括して入力したい場合も、v = EuclideanVector<T>(...) よりも set(...) を使用することでオーバーヘッドを削減できます。
 // 	
 //	-English-
 //
@@ -58,7 +58,7 @@
 //	On the other hand, EuclideanVector is costly to instantiate,
 //  so instantiation should be avoided whenever possible.
 //	When using EuclideanVector as a return type in methods, 
-//	it is recommended to return it as a left - hand side value reference.
+//	it is recommended to return it as a lvalue reference.
 //
 //	To input all values at once,
 //  use set(...) rather than v = EuclideanVector<T>(...) to reduce overhead.
@@ -3064,6 +3064,15 @@ public:
 		EUCVECTORINLINE SubPacker3<ElemType> wzz() const noexcept { return { w_, MXYZ::z_, MXYZ::z_ }; }
 	EUCNODISCARD_MSG("The reference has been discarded. This may be an unintended call.")
 		EUCVECTORINLINE SubPacker3<ElemType> wzw() const noexcept { return { w_, MXYZ::z_, w_ }; }
+
+	EUCNODISCARD_MSG("The reference has been discarded. This may be an unintended call.")
+		EUCVECTORINLINE SubPacker3<ElemType> wwx() const noexcept { return { w_, w_, MX::x_ }; }
+	EUCNODISCARD_MSG("The reference has been discarded. This may be an unintended call.")
+		EUCVECTORINLINE SubPacker3<ElemType> wwy() const noexcept { return { w_, w_, MXY::y_ }; }
+	EUCNODISCARD_MSG("The reference has been discarded. This may be an unintended call.")
+		EUCVECTORINLINE SubPacker3<ElemType> wwz() const noexcept { return { w_, w_, MXYZ::z_ }; }
+	EUCNODISCARD_MSG("The reference has been discarded. This may be an unintended call.")
+		EUCVECTORINLINE SubPacker3<ElemType> www() const noexcept { return { w_, w_, w_ }; }
 
 	EUCNODISCARD_MSG("The reference has been discarded. This may be an unintended call.")
 		EUCVECTORINLINE Packer<ElemType> xxxx() const noexcept { return { MX::x_, MX::x_, MX::x_, MX::x_ }; }
