@@ -1,15 +1,15 @@
 //
-//  _____               _   _              _                  _____
-//	|  ___|             | | | |            | |                /  __ \   _      _
-//	| |__   _   _   ___ | | | |  ___   ___ | |_   ___   _ __  | /  \/ _| |_  _| |_
-//	|  __| | | | | / __|| | | | / _ \ / __|| __| / _ \ | '__| | |    |_   _||_   _|
-//	| |___ | |_| || (__ \ \_/ /|  __/| (__ | |_ | (_) || |    | \__/\  |_|    |_|
-//	\____/  \__,_| \___| \___/  \___| \___| \__| \___/ |_|     \____/
+//   _____               _   _              _                  _____
+//  |  ___|             | | | |            | |                /  __ \   _      _
+//  | |__   _   _   ___ | | | |  ___   ___ | |_   ___   _ __  | /  \/ _| |_  _| |_
+//  |  __| | | | | / __|| | | | / _ \ / __|| __| / _ \ | '__| | |    |_   _||_   _|
+//  | |___ | |_| || (__ \ \_/ /|  __/| (__ | |_ | (_) || |    | \__/\  |_|    |_|
+//  \____/  \__,_| \___| \___/  \___| \___| \__| \___/ |_|     \____/
 //
 //	
 //	2024/10/22~
 //
-// 	Author : Hiyu Taninaka
+//	Author : Hiyu Taninaka
 // 
 //	Ver 1.0	(Last Update 2024/10/28)
 // 
@@ -56,12 +56,12 @@
 //	but as a computation - specific ResultPack type, which allows direct access to member variables.
 //
 //	On the other hand, EuclideanVector is costly to instantiate,
-//  so instantiation should be avoided whenever possible.
+//	so instantiation should be avoided whenever possible.
 //	When using EuclideanVector as a return type in methods, 
 //	it is recommended to return it as a lvalue reference.
 //
 //	To input all values at once,
-//  use set(...) rather than v = EuclideanVector<T>(...) to reduce overhead.
+//	use set(...) rather than v = EuclideanVector<T>(...) to reduce overhead.
 //
 //.
 
