@@ -116,8 +116,7 @@
 #endif
 
 //name space begin.
-namespace thl {
-namespace vector {
+namespace thl::vector {
 
 //meta functions.
 namespace meta {
@@ -127,11 +126,8 @@ namespace meta {
 	template<bool IF>
 	using if_t = _STD enable_if_t<IF, int>;
 
-	template<class T>
-	using r_ref = _STD add_rvalue_reference_t<T>;
-
 	template<bool IF>
-	constexpr _STD add_rvalue_reference_t<meta::if_t<IF>> cnd_type() noexcept;
+	constexpr _STD add_rvalue_reference_t<meta::if_t<IF>> when_true() noexcept;
 
 	template<class B, class T>
 	using is_type_t = _STD enable_if_t<_STD is_same_v<B,B>, T>;
@@ -152,17 +148,6 @@ namespace meta {
 	template<class C, class Head>
 	struct is_constructible_anynum_param<C, Head> {
 		static constexpr bool value = _STD is_constructible_v<C, Head>;
-	};
-
-	template<class Head, class... Body>
-	struct num_of_templates 
-		: private num_of_templates<Body...> {
-		static constexpr size_t value = 1 + num_of_templates<Body...>::value;
-	};
-
-	template<class Head>
-	struct num_of_templates<Head> {
-		static constexpr size_t value = 1;
 	};
 
 	class not_equal_info {
@@ -233,28 +218,25 @@ namespace meta {
 	template<class To, class... Any>
 	constexpr bool is_constructible_anynum_param_v = is_constructible_anynum_param<To, Any...>::value;
 
-	template<class... Any>
-	constexpr size_t num_of_templates_v = num_of_templates<Any...>::value;
-
 	// !=.
 	template<class Left, class Right>
-	constexpr bool is_not_equal_v = not_equal_info::value<Left, Right>;
+	constexpr bool is_invoke_not_equal_v = not_equal_info::value<Left, Right>;
 
 	// +=.
 	template<class Left, class Right>
-	constexpr bool is_add_equal_v = add_equal_info::value<Left, Right>;
+	constexpr bool is_invoke_add_equal_v = add_equal_info::value<Left, Right>;
 
 	// -=.
 	template<class Left, class Right>
-	constexpr bool is_sub_equal_v = sub_equal_info::value<Left, Right>;
+	constexpr bool is_invoke_sub_equal_v = sub_equal_info::value<Left, Right>;
 
 	// *=.
 	template<class Left, class Right>
-	constexpr bool is_mul_equal_v = mul_equal_info::value<Left, Right>;
+	constexpr bool is_invoke_mul_equal_v = mul_equal_info::value<Left, Right>;
 
 	// /=.
 	template<class Left, class Right>
-	constexpr bool is_div_equal_v = div_equal_info::value<Left, Right>;
+	constexpr bool is_invoke_div_equal_v = div_equal_info::value<Left, Right>;
 
 }
 
@@ -282,21 +264,21 @@ namespace detail {
 		template<class T>
 		EUCNODISCARD_MSG("The result of the multiplication is being ignored.If you intend to modify the lvalue, please use [*=] instead.")
 			EUCVECTORINLINE auto operator*(T&& scl) noexcept(noexcept(ResultPacker_1<meta::no_ref<decltype(x * scl)>>{x * scl}))
-			->decltype(meta::cnd_type<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_1<meta::no_ref<decltype(x* scl)>>{x* scl}) {
+			->decltype(meta::when_true<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_1<meta::no_ref<decltype(x* scl)>>{x* scl}) {
 			return { x * scl };
 		}
 
 		template<class T>
 		friend EUCNODISCARD_MSG("The result of the multiplication is being ignored.If you intend to modify the lvalue, please use [*=] instead.")
 			EUCVECTORINLINE static auto operator*(T&& scl, ResultPacker_1<E>&& right) noexcept(noexcept(ResultPacker_1<meta::no_ref<decltype(right.x * scl)>>{right.x * scl}))
-			->decltype(meta::cnd_type<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_1<meta::no_ref<decltype(right.x * scl)>>{right.x * scl}) {
+			->decltype(meta::when_true<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_1<meta::no_ref<decltype(right.x * scl)>>{right.x * scl}) {
 			return { right.x * scl };
 		}
 
 		template<class T>
 		EUCNODISCARD_MSG("The result of the division is being ignored.If you intend to modify the lvalue, please use [/=] instead.")
 			EUCVECTORINLINE auto operator/(T&& scl) noexcept(noexcept(ResultPacker_1<meta::no_ref<decltype(x / scl)>>{x / scl}))
-			->decltype(meta::cnd_type<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_1<meta::no_ref<decltype(x / scl)>>{x / scl}) {
+			->decltype(meta::when_true<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_1<meta::no_ref<decltype(x / scl)>>{x / scl}) {
 			return { x / scl };
 		}
 
@@ -317,8 +299,20 @@ namespace detail {
 		template<class T>
 		EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 			EUCVECTORINLINE auto operator!=(ResultPacker_1<T>&& right) const noexcept(noexcept(bool(!(_STD move(x) == _STD move(right.x)))))
-			-> decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), !(_STD move(x) == _STD move(right.x)), _STD declval<bool>()) {
+			-> decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), !(_STD move(x) == _STD move(right.x)), _STD declval<bool>()) {
 			return  !(_STD move(x) == _STD move(right.x));
+		}
+
+		EUCNODISCARD EUCVECTORINLINE ResultPacker_1<E>& operator+() noexcept {
+			return *this;
+		}
+		EUCNODISCARD EUCVECTORINLINE const ResultPacker_1<E>& operator+() const noexcept {
+			return *this;
+		}
+		template<class T = E>
+		EUCNODISCARD EUCVECTORINLINE auto operator-() const noexcept(noexcept(ResultPacker_1<T>() * -1))
+			->decltype(ResultPacker_1<T>() * -1) {
+			return { x * -1 };
 		}
 
 		void operator=(ResultPacker_1<E>) = delete;
@@ -346,21 +340,21 @@ namespace detail {
 		template<class T>
 		EUCNODISCARD_MSG("The result of the multiplication is being ignored.If you intend to modify the lvalue, please use [*=] instead.")
 			EUCVECTORINLINE auto operator*(T&& scl) noexcept(noexcept(ResultPacker_2<meta::no_ref<decltype(x * scl)>>{x * scl}))
-			->decltype(meta::cnd_type<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_2<meta::no_ref<decltype(x * scl)>>{x * scl}) {
+			->decltype(meta::when_true<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_2<meta::no_ref<decltype(x * scl)>>{x * scl}) {
 			return { x * scl,y * scl };
 		}
 
 		template<class T>
 		friend EUCNODISCARD_MSG("The result of the multiplication is being ignored.If you intend to modify the lvalue, please use [*=] instead.")
 			EUCVECTORINLINE static auto operator*(T&& scl, ResultPacker_2<E>&& right) noexcept(noexcept(ResultPacker_2<meta::no_ref<decltype(right.x* scl)>>{right.x* scl}))
-			->decltype(meta::cnd_type<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_2<meta::no_ref<decltype(right.x* scl)>>{right.x* scl}) {
+			->decltype(meta::when_true<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_2<meta::no_ref<decltype(right.x* scl)>>{right.x* scl}) {
 			return { right.x * scl,right.y * scl };
 		}
 
 		template<class T>
 		EUCNODISCARD_MSG("The result of the division is being ignored.If you intend to modify the lvalue, please use [/=] instead.")
 			EUCVECTORINLINE auto operator/(T&& scl) noexcept(noexcept(ResultPacker_2<meta::no_ref<decltype(x / scl)>>{x / scl}))
-			->decltype(meta::cnd_type<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_2<meta::no_ref<decltype(x / scl)>>{x / scl}) {
+			->decltype(meta::when_true<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_2<meta::no_ref<decltype(x / scl)>>{x / scl}) {
 			return { x / scl,y / scl };
 		}
 
@@ -381,8 +375,20 @@ namespace detail {
 		template<class T>
 		EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 			EUCVECTORINLINE auto operator!=(ResultPacker_2<T>&& right) const noexcept(noexcept(bool(!(_STD move(x) == _STD move(right.x)))))
-			-> decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), !(_STD move(x) == _STD move(right.x)), _STD declval<bool>()) {
+			-> decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), !(_STD move(x) == _STD move(right.x)), _STD declval<bool>()) {
 			return  (!(_STD move(x) == _STD move(right.x))) || (!(_STD move(y) == _STD move(right.y)));
+		}
+
+		EUCNODISCARD EUCVECTORINLINE ResultPacker_2<E>& operator+() noexcept {
+			return *this;
+		}
+		EUCNODISCARD EUCVECTORINLINE const ResultPacker_2<E>& operator+() const noexcept {
+			return *this;
+		}
+		template<class T = E>
+		EUCNODISCARD EUCVECTORINLINE auto operator-() const noexcept(noexcept(ResultPacker_2<T>() * -1))
+			->decltype(ResultPacker_2<T>() * -1) {
+			return { x * -1, y * -1 };
 		}
 
 		void operator=(ResultPacker_2<E>) = delete;
@@ -410,21 +416,21 @@ namespace detail {
 		template<class T>
 		EUCNODISCARD_MSG("The result of the multiplication is being ignored.If you intend to modify the lvalue, please use [*=] instead.")
 			EUCVECTORINLINE auto operator*(T&& scl) noexcept(noexcept(ResultPacker_3<meta::no_ref<decltype(x * _STD forward<T>(scl))>>{x * _STD forward<T>(scl)}))
-			->decltype(meta::cnd_type<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_3<meta::no_ref<decltype(x * _STD forward<T>(scl))>>{x * _STD forward<T>(scl)}) {
+			->decltype(meta::when_true<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_3<meta::no_ref<decltype(x * _STD forward<T>(scl))>>{x * _STD forward<T>(scl)}) {
 			return { x * scl,y * scl,z * scl };
 		}
 
 		template<class T>
 		friend EUCNODISCARD_MSG("The result of the multiplication is being ignored.If you intend to modify the lvalue, please use [*=] instead.")
 			EUCVECTORINLINE static auto operator*(T&& scl, ResultPacker_3<E>&& right) noexcept(noexcept(ResultPacker_3<meta::no_ref<decltype(right.x* scl)>>{right.x* scl}))
-			->decltype(meta::cnd_type<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_3<meta::no_ref<decltype(right.x* scl)>>{right.x* scl}) {
+			->decltype(meta::when_true<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_3<meta::no_ref<decltype(right.x* scl)>>{right.x* scl}) {
 			return { right.x * scl,right.y * scl,right.z * scl };
 		}
 
 		template<class T>
 		EUCNODISCARD_MSG("The result of the division is being ignored.If you intend to modify the lvalue, please use [/=] instead.")
 			EUCVECTORINLINE auto operator/(T&& scl) noexcept(noexcept(ResultPacker_3<meta::no_ref<decltype(x / _STD forward<T>(scl))>>{x / _STD forward<T>(scl)}))
-			->decltype(meta::cnd_type<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_3<meta::no_ref<decltype(x / _STD forward<T>(scl))>>{x / _STD forward<T>(scl)}) {
+			->decltype(meta::when_true<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_3<meta::no_ref<decltype(x / _STD forward<T>(scl))>>{x / _STD forward<T>(scl)}) {
 			return { x * scl,y * scl,z * scl };
 		}
 
@@ -445,8 +451,20 @@ namespace detail {
 		template<class T>
 		EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 			EUCVECTORINLINE auto operator!=(ResultPacker_3<T>&& right) const noexcept(noexcept(bool(!(_STD move(x) == _STD move(right.x)))))
-			-> decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), !(_STD move(x) == _STD move(right.x)), _STD declval<bool>()) {
+			-> decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), !(_STD move(x) == _STD move(right.x)), _STD declval<bool>()) {
 			return  (!(_STD move(x) == _STD move(right.x))) || (!(_STD move(y) == _STD move(right.y))) || (!(_STD move(z) == _STD move(right.z)));
+		}
+
+		EUCNODISCARD EUCVECTORINLINE ResultPacker_3<E>& operator+() noexcept {
+			return *this;
+		}
+		EUCNODISCARD EUCVECTORINLINE const ResultPacker_3<E>& operator+() const noexcept {
+			return *this;
+		}
+		template<class T = E>
+		EUCNODISCARD EUCVECTORINLINE auto operator-() const noexcept(noexcept(ResultPacker_3<T>() * -1))
+			->decltype(ResultPacker_3<T>() * -1) {
+			return { x * -1, y * -1, z * -1 };
 		}
 
 		void operator=(ResultPacker_3<E>) = delete;
@@ -474,21 +492,21 @@ namespace detail {
 		template<class T>
 		EUCNODISCARD_MSG("The result of the multiplication is being ignored.If you intend to modify the lvalue, please use [*=] instead.")
 			EUCVECTORINLINE auto operator*(T&& scl) noexcept(noexcept(ResultPacker_4<meta::no_ref<decltype(x * _STD forward<T>(scl))>>{x * _STD forward<T>(scl)}))
-			-> decltype(meta::cnd_type<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_4<meta::no_ref<decltype(x * _STD forward<T>(scl))>>{x * _STD forward<T>(scl)}) {
+			-> decltype(meta::when_true<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_4<meta::no_ref<decltype(x * _STD forward<T>(scl))>>{x * _STD forward<T>(scl)}) {
 			return { x * scl,y * scl,z * scl,w * scl };
 		}
 
 		template<class T>
 		friend EUCNODISCARD_MSG("The result of the multiplication is being ignored.If you intend to modify the lvalue, please use [*=] instead.")
 			EUCVECTORINLINE static auto operator*(T&& scl, ResultPacker_4<E>&& right) noexcept(noexcept(ResultPacker_4<meta::no_ref<decltype(right.x* scl)>>{right.x* scl}))
-			-> decltype(meta::cnd_type<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_4<meta::no_ref<decltype(right.x* scl)>>{right.x* scl})  {
+			-> decltype(meta::when_true<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_4<meta::no_ref<decltype(right.x* scl)>>{right.x* scl})  {
 			return { right.x * scl,right.y * scl,right.z * scl,right.w * scl };
 		}
 
 		template<class T>
 		EUCNODISCARD_MSG("The result of the division is being ignored.If you intend to modify the lvalue, please use [/=] instead.")
 			EUCVECTORINLINE auto operator/(T&& scl) noexcept(noexcept(ResultPacker_4<meta::no_ref<decltype(x / _STD forward<T>(scl))>>{x / _STD forward<T>(scl)}))
-			-> decltype(meta::cnd_type<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_4<meta::no_ref<decltype(x / _STD forward<T>(scl))>>{x / _STD forward<T>(scl)}) {
+			-> decltype(meta::when_true<!_STD is_base_of_v<meta::evd_euc_vec, meta::no_ref<T>>>(), ResultPacker_4<meta::no_ref<decltype(x / _STD forward<T>(scl))>>{x / _STD forward<T>(scl)}) {
 			return { x * scl,y * scl,z * scl,w * scl };
 		}
 
@@ -509,8 +527,20 @@ namespace detail {
 		template<class T>
 		EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 			EUCVECTORINLINE auto operator!=(ResultPacker_4<T>&& right) const noexcept(noexcept(bool(!(_STD move(x) == _STD move(right.x)))))
-			-> decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), !(_STD move(x) == _STD move(right.x)), _STD declval<bool>()) {
+			-> decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), !(_STD move(x) == _STD move(right.x)), _STD declval<bool>()) {
 			return  (!(_STD move(x) == _STD move(right.x))) || (!(_STD move(y) == _STD move(right.y))) || (!(_STD move(z) == _STD move(right.z))) || (!(_STD move(w) == _STD move(right.w)));
+		}
+
+		EUCNODISCARD EUCVECTORINLINE ResultPacker_4<E>& operator+() noexcept {
+			return *this;
+		}
+		EUCNODISCARD EUCVECTORINLINE const ResultPacker_4<E>& operator+() const noexcept {
+			return *this;
+		}
+		template<class T = E>
+		EUCNODISCARD EUCVECTORINLINE auto operator-() const noexcept(noexcept(ResultPacker_4<T>() * -1))
+			->decltype(ResultPacker_4<T>() * -1) {
+			return { x * -1, y * -1, z * -1, w * -1 };
 		}
 
 		void operator=(ResultPacker_4<E>) = delete;
@@ -760,35 +790,35 @@ public:
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(const EuclideanVector1<T>& right) const noexcept(noexcept(bool(!(x_ == right.x_))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(right)>>(), bool(!(x_ == right.x_)), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(right)>>(), bool(!(x_ == right.x_)), _STD declval<bool>())> {
 		return !(x_ == right.x_);
 	}
 
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(EuclideanVector1<T>&& right) const noexcept(noexcept(bool(!(x_ == _STD move(right.x_)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(x_ == _STD move(right.x_))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(x_ == _STD move(right.x_))), _STD declval<bool>())> {
 		return !(x_ == _STD move(right.x_));
 	}
 
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(RRefPacker<T> right) const noexcept(noexcept(bool(!(x_ == _STD move(right.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(x_ == _STD move(right.x))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(x_ == _STD move(right.x))), _STD declval<bool>())> {
 		return !(x_ == _STD move(right.x));
 	}
 
 	template<class T>
 	friend EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE static auto operator!=(RRefPacker<T> left, LRefConstEucVector right) noexcept(noexcept(bool(!(right.x_ == _STD move(left.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(_STD move(left)), decltype(right)>>(), bool(!(right.x_ == _STD move(left.x))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(_STD move(left)), decltype(right)>>(), bool(!(right.x_ == _STD move(left.x))), _STD declval<bool>())> {
 		return !(right.x_ == _STD move(left.x));
 	}
 
 	template<class T>
 	friend EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE static auto operator!=(RRefPacker<T> left, RRefEucVector right) noexcept(noexcept(bool(!(_STD move(right.x) == _STD move(left.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(_STD move(left)), decltype(_STD move(right))>>(), bool(!(_STD move(right.x_)) == _STD move(left.x)), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(_STD move(left)), decltype(_STD move(right))>>(), bool(!(_STD move(right.x_)) == _STD move(left.x)), _STD declval<bool>())> {
 		return !(_STD move(right.x_) == _STD move(left.x));
 	}
 	/*
@@ -853,21 +883,21 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(const EuclideanVector1<T>& vector) & noexcept(noexcept(x_ = x_ + vector.x_))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(vector)>>, x_ = x_ + vector.x_, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(vector)>>, x_ = x_ + vector.x_, _STD declval<LRefEucVector>()) {
 		x_ = x_ + vector.x_;
 		return *this;
 	}
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(EuclideanVector1<T>&& vector) & noexcept(noexcept(x_ = x_ + _STD move(vector.x_)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, x_ = x_ + _STD move(vector.x_), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, x_ = x_ + _STD move(vector.x_), _STD declval<LRefEucVector>()) {
 		x_ = x_ + _STD move(vector.x_);
 		return *this;
 	}
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(RRefPacker<T> pack) & noexcept(noexcept(x_ = x_ + _STD move(pack.x)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, x_ = x_ + _STD move(pack.x), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, x_ = x_ + _STD move(pack.x), _STD declval<LRefEucVector>()) {
 		x_ = x_ + _STD move(pack.x);
 		return *this;
 	}
@@ -895,21 +925,21 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(const EuclideanVector1<T>& vector) & noexcept(noexcept(x_ = x_ - vector.x_))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(vector)>>, x_ = x_ - vector.x_, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(vector)>>, x_ = x_ - vector.x_, _STD declval<LRefEucVector>()) {
 		x_ = x_ - vector.x_;
 		return *this;
 	}
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(EuclideanVector1<T>&& vector) & noexcept(noexcept(x_ = x_ - _STD move(vector.x_)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, x_ = x_ - _STD move(vector.x_), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, x_ = x_ - _STD move(vector.x_), _STD declval<LRefEucVector>()) {
 		x_ = x_ - _STD move(vector.x_);
 		return *this;
 	}
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(RRefPacker<T> pack) & noexcept(noexcept(x_ = x_ - _STD move(pack.x)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, x_ = x_ - _STD move(pack.x), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, x_ = x_ - _STD move(pack.x), _STD declval<LRefEucVector>()) {
 		x_ = x_ - _STD move(pack.x);
 		return *this;
 	}
@@ -924,7 +954,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator*=(T&& scl) & noexcept(noexcept(x_ = x_ * scl))
-		-> decltype(meta::cnd_type<!meta::is_mul_equal_v<decltype(*this), decltype(scl)>>, x_ = x_ * scl, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_mul_equal_v<decltype(*this), decltype(scl)>>, x_ = x_ * scl, _STD declval<LRefEucVector>()) {
 		x_ = x_ * scl;
 		return *this;
 	}
@@ -938,7 +968,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator/=(T&& scl) & noexcept(noexcept(x_ = x_ / scl))
-		-> decltype(meta::cnd_type<!meta::is_div_equal_v<decltype(*this), decltype(scl)>>, x_ = x_ / scl, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_div_equal_v<decltype(*this), decltype(scl)>>, x_ = x_ / scl, _STD declval<LRefEucVector>()) {
 		x_ = x_ / scl;
 		return *this;
 	}
@@ -1324,35 +1354,35 @@ public:
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(const EuclideanRecVector2<T>& right) const noexcept(noexcept(bool(!(y_ == right.y_))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(right)>>(), bool(!(y_ == right.y_)), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(right)>>(), bool(!(y_ == right.y_)), _STD declval<bool>())> {
 		return (!(MX::x_ == right.x_)) || (!(y_ == right.y_));
 	}
 
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(EuclideanRecVector2<T>&& right) const noexcept(noexcept(bool(!(y_ == _STD move(right.y_)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(y_ == _STD move(right.y_))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(y_ == _STD move(right.y_))), _STD declval<bool>())> {
 		return (!(MX::x_ == _STD move(right.x_))) || (!(y_ == _STD move(right.y_)));
 	}
 
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(RRefPacker<T> right) const noexcept(noexcept(bool(!(y_ == _STD move(right.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(y_ == _STD move(right.x))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(y_ == _STD move(right.x))), _STD declval<bool>())> {
 		return (!(MX::x_ == _STD move(right.x))) || (!(y_ == _STD move(right.y)));
 	}
 
 	template<class T>
 	friend EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE static auto operator!=(RRefPacker<T> left, LRefConstEucVector right) noexcept(noexcept(bool(!(right.y_ == _STD move(left.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(_STD move(left)), decltype(right)>>(), bool(!(right.y_ == _STD move(left.x))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(_STD move(left)), decltype(right)>>(), bool(!(right.y_ == _STD move(left.x))), _STD declval<bool>())> {
 		return (!(right.x_ == _STD move(left.x))) || (!(right.y_ == _STD move(left.y)));
 	}
 
 	template<class T>
 	friend EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE static auto operator!=(RRefPacker<T> left, RRefEucVector right) noexcept(noexcept(bool(!(_STD move(right.x) == _STD move(left.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(_STD move(left)), decltype(_STD move(right))>>(), bool(!(_STD move(right.y_)) == _STD move(left.x)), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(_STD move(left)), decltype(_STD move(right))>>(), bool(!(_STD move(right.y_)) == _STD move(left.x)), _STD declval<bool>())> {
 		return (!(_STD move(right.x_) == _STD move(left.x))) || (!(_STD move(right.y_) == _STD move(left.y)));
 	}
 	/*
@@ -1423,7 +1453,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(const EuclideanRecVector2<T>& vector) & noexcept(noexcept(y_ = y_ + vector.y_))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(vector)>>, y_ = y_ + vector.y_, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(vector)>>, y_ = y_ + vector.y_, _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ + vector.x_;
 		y_ = y_ + vector.y_;
 		return *this;
@@ -1431,7 +1461,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(EuclideanRecVector2<T>&& vector) & noexcept(noexcept(y_ = y_ + _STD move(vector.y_)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, y_ = y_ + _STD move(vector.y_), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, y_ = y_ + _STD move(vector.y_), _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ + _STD move(vector.x_);
 		y_ = y_ + _STD move(vector.y_);
 		return *this;
@@ -1439,7 +1469,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(RRefPacker<T> pack) & noexcept(noexcept(y_ = y_ + _STD move(pack.x)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, y_ = y_ + _STD move(pack.x), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, y_ = y_ + _STD move(pack.x), _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ + _STD move(pack.x);
 		y_ = y_ + _STD move(pack.y);
 		return *this;
@@ -1471,7 +1501,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(const EuclideanRecVector2<T>& vector) & noexcept(noexcept(y_ = y_ - vector.y_))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(vector)>>, y_ = y_ - vector.y_, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(vector)>>, y_ = y_ - vector.y_, _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ - vector.x_;
 		y_ = y_ - vector.y_;
 		return *this;
@@ -1479,7 +1509,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(EuclideanRecVector2<T>&& vector) & noexcept(noexcept(y_ = y_ - _STD move(vector.y_)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, y_ = y_ - _STD move(vector.y_), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, y_ = y_ - _STD move(vector.y_), _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ - _STD move(vector.x_);
 		y_ = y_ - _STD move(vector.y_);
 		return *this;
@@ -1487,7 +1517,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(RRefPacker<T> pack) & noexcept(noexcept(y_ = y_ - _STD move(pack.x)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, y_ = y_ - _STD move(pack.x), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, y_ = y_ - _STD move(pack.x), _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ - _STD move(pack.x);
 		y_ = y_ - _STD move(pack.y);
 		return *this;
@@ -1504,7 +1534,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator*=(T&& scl) & noexcept(noexcept(y_ = y_ * scl))
-		-> decltype(meta::cnd_type<!meta::is_mul_equal_v<decltype(*this), decltype(scl)>>, y_ = y_ * scl, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_mul_equal_v<decltype(*this), decltype(scl)>>, y_ = y_ * scl, _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ * scl;
 		y_ = y_ * scl;
 		return *this;
@@ -1520,7 +1550,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator/=(T&& scl) & noexcept(noexcept(y_ = y_ / scl))
-		-> decltype(meta::cnd_type<!meta::is_div_equal_v<decltype(*this), decltype(scl)>>, y_ = y_ / scl, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_div_equal_v<decltype(*this), decltype(scl)>>, y_ = y_ / scl, _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ / scl;
 		y_ = y_ / scl;
 		return *this;
@@ -1558,7 +1588,7 @@ public:
 	EUCNODISCARD_MSG("The reference has been discarded. This may be an unintended call.")
 		EUCVECTORINLINE Packer<ElemType> yy() const noexcept { return { y_,y_ }; }
 	EUCNODISCARD_MSG("The output has been discarded. There may have been an unintended call.")
-		EUCVECTORINLINE Packer<ElemType> get_pack() const noexcept { return { MX::x_,y_ }; }
+		EUCVECTORINLINE Packer<ElemType> xy() const noexcept { return { MX::x_,y_ }; }
 	/*
 		@brief
 
@@ -1918,35 +1948,35 @@ public:
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(const EuclideanRecVector3<T>& right) const noexcept(noexcept(bool(!(z_ == right.z_))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(right)>>(), bool(!(z_ == right.z_)), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(right)>>(), bool(!(z_ == right.z_)), _STD declval<bool>())> {
 		return (!(MX::x_ == right.x_)) || (!(MXY::y_ == right.y_)) || (!(z_ == right.z_));
 	}
 
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(EuclideanRecVector3<T>&& right) const noexcept(noexcept(bool(!(z_ == _STD move(right.z_)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(z_ == _STD move(right.z_))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(z_ == _STD move(right.z_))), _STD declval<bool>())> {
 		return (!(MX::x_ == _STD move(right.x_))) || (!(MXY::y_ == _STD move(right.y_))) || (!(z_ == _STD move(right.z_)));
 	}
 
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(RRefPacker<T> right) const noexcept(noexcept(bool(!(z_ == _STD move(right.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(z_ == _STD move(right.x))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(z_ == _STD move(right.x))), _STD declval<bool>())> {
 		return (!(MX::x_ == _STD move(right.x))) || (!(MXY::y_ == _STD move(right.y))) || (!(z_ == _STD move(right.z)));
 	}
 
 	template<class T>
 	friend EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE static auto operator!=(RRefPacker<T> left, LRefConstEucVector right) noexcept(noexcept(bool(!(right.z_ == _STD move(left.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(_STD move(left)), decltype(right)>>(), bool(!(right.z_ == _STD move(left.x))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(_STD move(left)), decltype(right)>>(), bool(!(right.z_ == _STD move(left.x))), _STD declval<bool>())> {
 		return (!(right.x_ == _STD move(left.x))) || (!(right.y_ == _STD move(left.y))) || (!(right.z_ == _STD move(left.z)));
 	}
 
 	template<class T>
 	friend EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE static auto operator!=(RRefPacker<T> left, RRefEucVector right) noexcept(noexcept(bool(!(_STD move(right.x) == _STD move(left.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(_STD move(left)), decltype(_STD move(right))>>(), bool(!(_STD move(right.z_)) == _STD move(left.x)), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(_STD move(left)), decltype(_STD move(right))>>(), bool(!(_STD move(right.z_)) == _STD move(left.x)), _STD declval<bool>())> {
 		return (!(_STD move(right.x_) == _STD move(left.x))) || (!(_STD move(right.y_) == _STD move(left.y))) || (!(_STD move(right.z_) == _STD move(left.z)));
 	}
 	/*
@@ -2023,7 +2053,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(const EuclideanRecVector3<T>& vector) & noexcept(noexcept(z_ = z_ + vector.z_))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(vector)>>, z_ = z_ + vector.z_, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(vector)>>, z_ = z_ + vector.z_, _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ + vector.x_;
 		MXY::y_ = MXY::y_ + vector.y_;
 		z_ = z_ + vector.z_;
@@ -2032,7 +2062,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(EuclideanRecVector3<T>&& vector) & noexcept(noexcept(z_ = z_ + _STD move(vector.z_)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, z_ = z_ + _STD move(vector.z_), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, z_ = z_ + _STD move(vector.z_), _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ + _STD move(vector.x_);
 		MXY::y_ = MXY::y_ + _STD move(vector.y_);
 		z_ = z_ + _STD move(vector.z_);
@@ -2041,7 +2071,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(RRefPacker<T> pack) & noexcept(noexcept(z_ = z_ + _STD move(pack.x)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, z_ = z_ + _STD move(pack.x), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, z_ = z_ + _STD move(pack.x), _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ + _STD move(pack.x);
 		MXY::y_ = MXY::y_ + _STD move(pack.y);
 		z_ = z_ + _STD move(pack.z);
@@ -2077,7 +2107,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(const EuclideanRecVector3<T>& vector) & noexcept(noexcept(z_ = z_ - vector.z_))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(vector)>>, z_ = z_ - vector.z_, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(vector)>>, z_ = z_ - vector.z_, _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ - vector.x_;
 		MXY::y_ = MXY::y_ - vector.y_;
 		z_ = z_ - vector.z_;
@@ -2086,7 +2116,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(EuclideanRecVector3<T>&& vector) & noexcept(noexcept(z_ = z_ - _STD move(vector.z_)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, z_ = z_ - _STD move(vector.z_), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, z_ = z_ - _STD move(vector.z_), _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ - _STD move(vector.x_);
 		MXY::y_ = MXY::y_ - _STD move(vector.y_);
 		z_ = z_ - _STD move(vector.z_);
@@ -2095,7 +2125,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(RRefPacker<T> pack) & noexcept(noexcept(z_ = z_ - _STD move(pack.x)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, z_ = z_ - _STD move(pack.x), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, z_ = z_ - _STD move(pack.x), _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ - _STD move(pack.x);
 		MXY::y_ = MXY::y_ - _STD move(pack.y);
 		z_ = z_ - _STD move(pack.z);
@@ -2114,7 +2144,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator*=(T&& scl) & noexcept(noexcept(z_ = z_ * scl))
-		-> decltype(meta::cnd_type<!meta::is_mul_equal_v<decltype(*this), decltype(scl)>>, z_ = z_ * scl, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_mul_equal_v<decltype(*this), decltype(scl)>>, z_ = z_ * scl, _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ * scl;
 		MXY::y_ = MXY::y_ * scl;
 		z_ = z_ * scl;
@@ -2132,7 +2162,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator/=(T&& scl) & noexcept(noexcept(z_ = z_ / scl))
-		-> decltype(meta::cnd_type<!meta::is_div_equal_v<decltype(*this), decltype(scl)>>, z_ = z_ / scl, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_div_equal_v<decltype(*this), decltype(scl)>>, z_ = z_ / scl, _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ / scl;
 		MXY::y_ = MXY::y_ / scl;
 		z_ = z_ / scl;
@@ -2248,8 +2278,6 @@ public:
 		EUCVECTORINLINE Packer<ElemType> zzy() const noexcept { return { z_, z_, MXY::y_ }; }
 	EUCNODISCARD_MSG("The reference has been discarded. This may be an unintended call.")
 		EUCVECTORINLINE Packer<ElemType> zzz() const noexcept { return { z_, z_, z_ }; }
-	EUCNODISCARD_MSG("The output has been discarded. There may have been an unintended call.")
-		EUCVECTORINLINE Packer<ElemType> get_pack() const noexcept { return { MX::x_,MXY::y_, z_ }; }
 	/*
 		@brief
 
@@ -2640,35 +2668,35 @@ public:
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(const EuclideanRecVector4<T>& right) const noexcept(noexcept(bool(!(w_ == right.w_))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(right)>>(), bool(!(w_ == right.w_)), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(right)>>(), bool(!(w_ == right.w_)), _STD declval<bool>())> {
 		return (!(MX::x_ == right.x_)) || (!(MXY::y_ == right.y_)) || (!(MXYZ::z_ == right.z_)) || (!(w_ == right.w_));
 	}
 
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(EuclideanRecVector4<T>&& right) const noexcept(noexcept(bool(!(w_ == _STD move(right.w_)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(w_ == _STD move(right.w_))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(w_ == _STD move(right.w_))), _STD declval<bool>())> {
 		return (!(MX::x_ == _STD move(right.x_))) || (!(MXY::y_ == _STD move(right.y_))) || (!(MXYZ::z_ == _STD move(right.z_))) || (!(w_ == _STD move(right.w_)));
 	}
 
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(RRefPacker<T> right) const noexcept(noexcept(bool(!(w_ == _STD move(right.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(w_ == _STD move(right.x))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(w_ == _STD move(right.x))), _STD declval<bool>())> {
 		return (!(MX::x_ == _STD move(right.x))) || (!(MXY::y_ == _STD move(right.y))) || (!(MXYZ::z_ == _STD move(right.z))) || (!(w_ == _STD move(right.w)));
 	}
 
 	template<class T>
 	friend EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE static auto operator!=(RRefPacker<T> left, LRefConstEucVector right) noexcept(noexcept(bool(!(right.w_ == _STD move(left.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(_STD move(left)), decltype(right)>>(), bool(!(right.w_ == _STD move(left.x))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(_STD move(left)), decltype(right)>>(), bool(!(right.w_ == _STD move(left.x))), _STD declval<bool>())> {
 		return (!(right.x_ == _STD move(left.x))) || (!(right.y_ == _STD move(left.y))) || (!(right.z_ == _STD move(left.z))) || (!(right.w_ == _STD move(left.w)));
 	}
 
 	template<class T>
 	friend EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE static auto operator!=(RRefPacker<T> left, RRefEucVector right) noexcept(noexcept(bool(!(_STD move(right.x) == _STD move(left.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(_STD move(left)), decltype(_STD move(right))>>(), bool(!(_STD move(right.w_)) == _STD move(left.x)), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(_STD move(left)), decltype(_STD move(right))>>(), bool(!(_STD move(right.w_)) == _STD move(left.x)), _STD declval<bool>())> {
 		return (!(_STD move(right.x_) == _STD move(left.x))) || (!(_STD move(right.y_) == _STD move(left.y))) || (!(_STD move(right.z_) == _STD move(left.z))) || (!(_STD move(right.w_) == _STD move(left.w)));
 	}
 	/*
@@ -2751,7 +2779,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(const EuclideanRecVector4<T>& vector) & noexcept(noexcept(w_ = w_ + vector.w_))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(vector)>>, w_ = w_ + vector.w_, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(vector)>>, w_ = w_ + vector.w_, _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ + vector.x_;
 		MXY::y_ = MXY::y_ + vector.y_;
 		MXYZ::z_ = MXYZ::z_ + vector.z_;
@@ -2761,7 +2789,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(EuclideanRecVector4<T>&& vector) & noexcept(noexcept(w_ = w_ + _STD move(vector.w_)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, w_ = w_ + _STD move(vector.w_), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, w_ = w_ + _STD move(vector.w_), _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ + _STD move(vector.x_);
 		MXY::y_ = MXY::y_ + _STD move(vector.y_);
 		MXYZ::z_ = MXYZ::z_ + _STD move(vector.z_);
@@ -2771,7 +2799,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(RRefPacker<T> pack) & noexcept(noexcept(w_ = w_ + _STD move(pack.x)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, w_ = w_ + _STD move(pack.x), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, w_ = w_ + _STD move(pack.x), _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ + _STD move(pack.x);
 		MXY::y_ = MXY::y_ + _STD move(pack.y);
 		MXYZ::z_ = MXYZ::z_ + _STD move(pack.z);
@@ -2811,7 +2839,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(const EuclideanRecVector4<T>& vector) & noexcept(noexcept(w_ = w_ - vector.w_))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(vector)>>, w_ = w_ - vector.w_, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(vector)>>, w_ = w_ - vector.w_, _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ - vector.x_;
 		MXY::y_ = MXY::y_ - vector.y_;
 		MXYZ::z_ = MXYZ::z_ - vector.z_;
@@ -2821,7 +2849,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(EuclideanRecVector4<T>&& vector) & noexcept(noexcept(w_ = w_ - _STD move(vector.w_)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, w_ = w_ - _STD move(vector.w_), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, w_ = w_ - _STD move(vector.w_), _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ - _STD move(vector.x_);
 		MXY::y_ = MXY::y_ - _STD move(vector.y_);
 		MXYZ::z_ = MXYZ::z_ - _STD move(vector.z_);
@@ -2831,7 +2859,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(RRefPacker<T> pack) & noexcept(noexcept(w_ = w_ - _STD move(pack.x)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, w_ = w_ - _STD move(pack.x), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, w_ = w_ - _STD move(pack.x), _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ - _STD move(pack.x);
 		MXY::y_ = MXY::y_ - _STD move(pack.y);
 		MXYZ::z_ = MXYZ::z_ - _STD move(pack.z);
@@ -2852,7 +2880,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator*=(T&& scl) & noexcept(noexcept(w_ = w_ * scl))
-		-> decltype(meta::cnd_type<!meta::is_mul_equal_v<decltype(*this), decltype(scl)>>, w_ = w_ * scl, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_mul_equal_v<decltype(*this), decltype(scl)>>, w_ = w_ * scl, _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ * scl;
 		MXY::y_ = MXY::y_ * scl;
 		MXYZ::z_ = MXYZ::z_ * scl;
@@ -2872,7 +2900,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator/=(T&& scl) & noexcept(noexcept(w_ = w_ / scl))
-		-> decltype(meta::cnd_type<!meta::is_div_equal_v<decltype(*this), decltype(scl)>>, w_ = w_ / scl, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_div_equal_v<decltype(*this), decltype(scl)>>, w_ = w_ / scl, _STD declval<LRefEucVector>()) {
 		MX::x_ = MX::x_ / scl;
 		MXY::y_ = MXY::y_ / scl;
 		MXYZ::z_ = MXYZ::z_ / scl;
@@ -3675,7 +3703,7 @@ public:
 	EUCNODISCARD_MSG("The reference has been discarded. This may be an unintended call.")
 		EUCVECTORINLINE Packer<ElemType> wwww() const noexcept { return { w_, w_, w_, w_ }; }
 	EUCNODISCARD_MSG("The output has been discarded. There may have been an unintended call.")
-		EUCVECTORINLINE Packer<ElemType> get_pack() const noexcept { return { MX::x_,MXY::y_, MXYZ::z_, w_ }; }
+		EUCVECTORINLINE Packer<ElemType> xyzw() const noexcept { return { MX::x_,MXY::y_, MXYZ::z_, w_ }; }
 #ifdef _MSC_VER
 #pragma endregion
 #endif
@@ -4039,35 +4067,35 @@ public:
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(const EuclideanCmplVector2<T>& right) const noexcept(noexcept(bool(!(y_ == right.y_))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(right)>>(), bool(!(y_ == right.y_)), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(right)>>(), bool(!(y_ == right.y_)), _STD declval<bool>())> {
 		return (!(x_ == right.x_)) || (!(y_ == right.y_));
 	}
 
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(EuclideanCmplVector2<T>&& right) const noexcept(noexcept(bool(!(y_ == _STD move(right.y_)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(y_ == _STD move(right.y_))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(y_ == _STD move(right.y_))), _STD declval<bool>())> {
 		return (!(x_ == _STD move(right.x_))) || (!(y_ == _STD move(right.y_)));
 	}
 
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(RRefPacker<T> right) const noexcept(noexcept(bool(!(y_ == _STD move(right.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(y_ == _STD move(right.x))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(y_ == _STD move(right.x))), _STD declval<bool>())> {
 		return (!(x_ == _STD move(right.x))) || (!(y_ == _STD move(right.y)));
 	}
 
 	template<class T>
 	friend EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE static auto operator!=(RRefPacker<T> left, LRefConstEucVector right) noexcept(noexcept(bool(!(right.y_ == _STD move(left.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(_STD move(left)), decltype(right)>>(), bool(!(right.y_ == _STD move(left.x))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(_STD move(left)), decltype(right)>>(), bool(!(right.y_ == _STD move(left.x))), _STD declval<bool>())> {
 		return (!(right.x_ == _STD move(left.x))) || (!(right.y_ == _STD move(left.y)));
 	}
 
 	template<class T>
 	friend EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE static auto operator!=(RRefPacker<T> left, RRefEucVector right) noexcept(noexcept(bool(!(_STD move(right.x) == _STD move(left.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(_STD move(left)), decltype(_STD move(right))>>(), bool(!(_STD move(right.y_)) == _STD move(left.x)), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(_STD move(left)), decltype(_STD move(right))>>(), bool(!(_STD move(right.y_)) == _STD move(left.x)), _STD declval<bool>())> {
 		return (!(_STD move(right.x_) == _STD move(left.x))) || (!(_STD move(right.y_) == _STD move(left.y)));
 	}
 	/*
@@ -4138,7 +4166,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(const EuclideanCmplVector2<T>& vector) & noexcept(noexcept(y_ = y_ + vector.y_))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(vector)>>, y_ = y_ + vector.y_, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(vector)>>, y_ = y_ + vector.y_, _STD declval<LRefEucVector>()) {
 		x_ = x_ + vector.x_;
 		y_ = y_ + vector.y_;
 		return *this;
@@ -4146,7 +4174,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(EuclideanCmplVector2<T>&& vector) & noexcept(noexcept(y_ = y_ + _STD move(vector.y_)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, y_ = y_ + _STD move(vector.y_), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, y_ = y_ + _STD move(vector.y_), _STD declval<LRefEucVector>()) {
 		x_ = x_ + _STD move(vector.x_);
 		y_ = y_ + _STD move(vector.y_);
 		return *this;
@@ -4154,7 +4182,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(RRefPacker<T> pack) & noexcept(noexcept(y_ = y_ + _STD move(pack.x)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, y_ = y_ + _STD move(pack.x), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, y_ = y_ + _STD move(pack.x), _STD declval<LRefEucVector>()) {
 		x_ = x_ + _STD move(pack.x);
 		y_ = y_ + _STD move(pack.y);
 		return *this;
@@ -4186,7 +4214,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(const EuclideanCmplVector2<T>& vector) & noexcept(noexcept(y_ = y_ - vector.y_))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(vector)>>, y_ = y_ - vector.y_, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(vector)>>, y_ = y_ - vector.y_, _STD declval<LRefEucVector>()) {
 		x_ = x_ - vector.x_;
 		y_ = y_ - vector.y_;
 		return *this;
@@ -4194,7 +4222,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(EuclideanCmplVector2<T>&& vector) & noexcept(noexcept(y_ = y_ - _STD move(vector.y_)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, y_ = y_ - _STD move(vector.y_), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, y_ = y_ - _STD move(vector.y_), _STD declval<LRefEucVector>()) {
 		x_ = x_ - _STD move(vector.x_);
 		y_ = y_ - _STD move(vector.y_);
 		return *this;
@@ -4202,7 +4230,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(RRefPacker<T> pack) & noexcept(noexcept(y_ = y_ - _STD move(pack.x)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, y_ = y_ - _STD move(pack.x), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, y_ = y_ - _STD move(pack.x), _STD declval<LRefEucVector>()) {
 		x_ = x_ - _STD move(pack.x);
 		y_ = y_ - _STD move(pack.y);
 		return *this;
@@ -4219,7 +4247,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator*=(T&& scl) & noexcept(noexcept(y_ = y_ * scl))
-		-> decltype(meta::cnd_type<!meta::is_mul_equal_v<decltype(*this), decltype(scl)>>, y_ = y_ * scl, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_mul_equal_v<decltype(*this), decltype(scl)>>, y_ = y_ * scl, _STD declval<LRefEucVector>()) {
 		x_ = x_ * scl;
 		y_ = y_ * scl;
 		return *this;
@@ -4235,7 +4263,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator/=(T&& scl) & noexcept(noexcept(y_ = y_ / scl))
-		-> decltype(meta::cnd_type<!meta::is_div_equal_v<decltype(*this), decltype(scl)>>, y_ = y_ / scl, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_div_equal_v<decltype(*this), decltype(scl)>>, y_ = y_ / scl, _STD declval<LRefEucVector>()) {
 		x_ = x_ / scl;
 		y_ = y_ / scl;
 		return *this;
@@ -4273,7 +4301,7 @@ public:
 	EUCNODISCARD_MSG("The reference has been discarded. This may be an unintended call.")
 		EUCVECTORINLINE Packer<ElemType> yy() const noexcept { return { y_,y_ }; }
 	EUCNODISCARD_MSG("The output has been discarded. There may have been an unintended call.")
-		EUCVECTORINLINE Packer<ElemType> get_pack() const noexcept { return { x_,y_ }; }
+		EUCVECTORINLINE Packer<ElemType> xy() const noexcept { return { x_,y_ }; }
 	/*
 		@brief
 
@@ -4310,21 +4338,21 @@ public:
 	*/
 	template<class T>
 	EUCNODISCARD_MSG("The dot product calculation results were ignored. This may be an unintended call.")
-		EUCVECTORINLINE auto dot(const EuclideanCmplVector2<T>& vector) const noexcept(noexcept(x_ + x_) && noexcept(ElemType(x_* vector.x_ + y_* vector.y_)))
-		-> decltype(ElemType(x_ * vector.x_ + y_ * vector.y_), x_ + x_) {
-		return ElemType(x_ * vector.x_) + ElemType(y_ * vector.y_);
+		EUCVECTORINLINE auto dot(const EuclideanCmplVector2<T>& vector) const noexcept(noexcept(x_* vector.x_ + x_ * vector.x_))
+		-> decltype(x_* vector.x_ + x_ * vector.x_) {
+		return x_ * vector.x_ + y_ * vector.y_;
 	}
 	template<class T>
 	EUCNODISCARD_MSG("The dot product calculation results were ignored. This may be an unintended call.")
-		EUCVECTORINLINE auto dot(EuclideanCmplVector2<T>&& vector) const noexcept(noexcept(x_ + x_) && noexcept(ElemType(x_* _STD move(vector.x_) + y_ * _STD move(vector.y_))))
-		-> decltype(ElemType(x_* _STD move(vector.x_) + y_ * _STD move(vector.y_)), x_ + x_) {
-		return ElemType(x_ * _STD move(vector.x_)) + ElemType(y_ * _STD move(vector.y_));
+		EUCVECTORINLINE auto dot(EuclideanCmplVector2<T>&& vector) const noexcept(noexcept(x_* _STD move(vector.x_) + x_ * _STD move(vector.x_)))
+		-> decltype(x_* _STD move(vector.x_) + x_ * _STD move(vector.x_)) {
+		return x_ * _STD move(vector.x_) + x_ * _STD move(vector.x_);
 	}
 	template<class T>
 	EUCNODISCARD_MSG("The dot product calculation results were ignored. This may be an unintended call.")
-		EUCVECTORINLINE auto dot(RRefPacker<T> pack) const noexcept(noexcept(x_ + x_) && noexcept(ElemType(x_* _STD move(pack.x) + y_ * _STD move(pack.y))))
-		-> decltype(ElemType(x_* _STD move(pack.x) + y_ * _STD move(pack.y)), x_ + x_) {
-		return ElemType(x_ * _STD move(pack.x)) + ElemType(y_ * _STD move(pack.y));
+		EUCVECTORINLINE auto dot(RRefPacker<T> pack) const noexcept(noexcept(x_* _STD move(pack.x) + x_ * _STD move(pack.x)))
+		-> decltype(x_* _STD move(pack.x) + x_ * _STD move(pack.x)) {
+		return x_ * _STD move(pack.x) + y_ * _STD move(pack.y);
 	}
 	/*
 		@brief
@@ -4338,7 +4366,7 @@ public:
 	EUCNODISCARD_MSG("The norm squared calculation results were ignored. This may be an unintended call.")
 		EUCVECTORINLINE auto eucnorm_squared() const noexcept(noexcept(dot(_STD declval<LRefEucVector>())))
 		-> decltype(dot(_STD declval<LRefEucVector>())) {
-		return T(x_ * x_) + T(y_ * y_);
+		return x_ * x_ + y_ * y_;
 	}
 	/*
 		@brief
@@ -4352,7 +4380,7 @@ public:
 	EUCNODISCARD_MSG("The norm calculation results were ignored. This may be an unintended call.")
 		EUCVECTORINLINE auto eucnorm() const noexcept(noexcept(_STD sqrt(eucnorm_squared<T>())))
 		-> decltype(_STD sqrt(eucnorm_squared<T>())) {
-		return _STD sqrt(T(x_ * x_) + T(y_ * y_));
+		return _STD sqrt(x_ * x_ + y_ * y_);
 	}
 	/*
 		@brief
@@ -4446,9 +4474,9 @@ public:
 
 	template<class T, meta::if_t<_STD is_constructible_v<ElemType, T>> = 0>
 	EuclideanCmplVector3(RRefPacker<T> pack) noexcept(_STD is_nothrow_constructible_v<ElemType, T>)
-		: x_(_STD move(pack.x_))
-		, y_(_STD move(pack.y_))
-		, z_(_STD move(pack.z_))
+		: x_(_STD move(pack.x))
+		, y_(_STD move(pack.y))
+		, z_(_STD move(pack.z))
 	{}
 
 	template<class X, class Y, class Z, meta::if_t<meta::is_constructible_anynum_param_v<ElemType, X, Y, Z>> = 0>
@@ -4632,35 +4660,35 @@ public:
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(const EuclideanCmplVector3<T>& right) const noexcept(noexcept(bool(!(z_ == right.z_))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(right)>>(), bool(!(z_ == right.z_)), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(right)>>(), bool(!(z_ == right.z_)), _STD declval<bool>())> {
 		return (!(x_ == right.x_)) || (!(y_ == right.y_)) || (!(z_ == right.z_));
 	}
 
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(EuclideanCmplVector3<T>&& right) const noexcept(noexcept(bool(!(z_ == _STD move(right.z_)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(z_ == _STD move(right.z_))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(z_ == _STD move(right.z_))), _STD declval<bool>())> {
 		return (!(x_ == _STD move(right.x_))) || (!(y_ == _STD move(right.y_))) || (!(z_ == _STD move(right.z_)));
 	}
 
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(RRefPacker<T> right) const noexcept(noexcept(bool(!(z_ == _STD move(right.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(z_ == _STD move(right.x))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(z_ == _STD move(right.x))), _STD declval<bool>())> {
 		return (!(x_ == _STD move(right.x))) || (!(y_ == _STD move(right.y))) || (!(z_ == _STD move(right.z)));
 	}
 
 	template<class T>
 	friend EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE static auto operator!=(RRefPacker<T> left, LRefConstEucVector right) noexcept(noexcept(bool(!(right.z_ == _STD move(left.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(_STD move(left)), decltype(right)>>(), bool(!(right.z_ == _STD move(left.x))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(_STD move(left)), decltype(right)>>(), bool(!(right.z_ == _STD move(left.x))), _STD declval<bool>())> {
 		return (!(right.x_ == _STD move(left.x))) || (!(right.y_ == _STD move(left.y))) || (!(right.z_ == _STD move(left.z)));
 	}
 
 	template<class T>
 	friend EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE static auto operator!=(RRefPacker<T> left, RRefEucVector right) noexcept(noexcept(bool(!(_STD move(right.x) == _STD move(left.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(_STD move(left)), decltype(_STD move(right))>>(), bool(!(_STD move(right.z_)) == _STD move(left.x)), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(_STD move(left)), decltype(_STD move(right))>>(), bool(!(_STD move(right.z_)) == _STD move(left.x)), _STD declval<bool>())> {
 		return (!(_STD move(right.x_) == _STD move(left.x))) || (!(_STD move(right.y_) == _STD move(left.y))) || (!(_STD move(right.z_) == _STD move(left.z)));
 	}
 	/*
@@ -4737,7 +4765,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(const EuclideanCmplVector3<T>& vector) & noexcept(noexcept(z_ = z_ + vector.z_))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(vector)>>, z_ = z_ + vector.z_, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(vector)>>, z_ = z_ + vector.z_, _STD declval<LRefEucVector>()) {
 		x_ = x_ + vector.x_;
 		y_ = y_ + vector.y_;
 		z_ = z_ + vector.z_;
@@ -4746,7 +4774,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(EuclideanCmplVector3<T>&& vector) & noexcept(noexcept(z_ = z_ + _STD move(vector.z_)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, z_ = z_ + _STD move(vector.z_), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, z_ = z_ + _STD move(vector.z_), _STD declval<LRefEucVector>()) {
 		x_ = x_ + _STD move(vector.x_);
 		y_ = y_ + _STD move(vector.y_);
 		z_ = z_ + _STD move(vector.z_);
@@ -4755,7 +4783,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(RRefPacker<T> pack) & noexcept(noexcept(z_ = z_ + _STD move(pack.x)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, z_ = z_ + _STD move(pack.x), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, z_ = z_ + _STD move(pack.x), _STD declval<LRefEucVector>()) {
 		x_ = x_ + _STD move(pack.x);
 		y_ = y_ + _STD move(pack.y);
 		z_ = z_ + _STD move(pack.z);
@@ -4791,7 +4819,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(const EuclideanCmplVector3<T>& vector) & noexcept(noexcept(z_ = z_ - vector.z_))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(vector)>>, z_ = z_ - vector.z_, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(vector)>>, z_ = z_ - vector.z_, _STD declval<LRefEucVector>()) {
 		x_ = x_ - vector.x_;
 		y_ = y_ - vector.y_;
 		z_ = z_ - vector.z_;
@@ -4800,7 +4828,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(EuclideanCmplVector3<T>&& vector) & noexcept(noexcept(z_ = z_ - _STD move(vector.z_)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, z_ = z_ - _STD move(vector.z_), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, z_ = z_ - _STD move(vector.z_), _STD declval<LRefEucVector>()) {
 		x_ = x_ - _STD move(vector.x_);
 		y_ = y_ - _STD move(vector.y_);
 		z_ = z_ - _STD move(vector.z_);
@@ -4809,7 +4837,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(RRefPacker<T> pack) & noexcept(noexcept(z_ = z_ - _STD move(pack.x)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, z_ = z_ - _STD move(pack.x), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, z_ = z_ - _STD move(pack.x), _STD declval<LRefEucVector>()) {
 		x_ = x_ - _STD move(pack.x);
 		y_ = y_ - _STD move(pack.y);
 		z_ = z_ - _STD move(pack.z);
@@ -4828,7 +4856,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator*=(T&& scl) & noexcept(noexcept(z_ = z_ * scl))
-		-> decltype(meta::cnd_type<!meta::is_mul_equal_v<decltype(*this), decltype(scl)>>, z_ = z_ * scl, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_mul_equal_v<decltype(*this), decltype(scl)>>, z_ = z_ * scl, _STD declval<LRefEucVector>()) {
 		x_ = x_ * scl;
 		y_ = y_ * scl;
 		z_ = z_ * scl;
@@ -4846,7 +4874,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator/=(T&& scl) & noexcept(noexcept(z_ = z_ / scl))
-		-> decltype(meta::cnd_type<!meta::is_div_equal_v<decltype(*this), decltype(scl)>>, z_ = z_ / scl, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_div_equal_v<decltype(*this), decltype(scl)>>, z_ = z_ / scl, _STD declval<LRefEucVector>()) {
 		x_ = x_ / scl;
 		y_ = y_ / scl;
 		z_ = z_ / scl;
@@ -4960,8 +4988,6 @@ public:
 		EUCVECTORINLINE Packer<ElemType> zzy() const noexcept { return { z_, z_, y_ }; }
 	EUCNODISCARD_MSG("The reference has been discarded. This may be an unintended call.")
 		EUCVECTORINLINE Packer<ElemType> zzz() const noexcept { return { z_, z_, z_ }; }
-	EUCNODISCARD_MSG("The output has been discarded. There may have been an unintended call.")
-		EUCVECTORINLINE Packer<ElemType> get_pack() const noexcept { return { x_, y_, z_ }; }
 	/*
 		@brief
 
@@ -5000,21 +5026,21 @@ public:
 	*/
 	template<class T>
 	EUCNODISCARD_MSG("The dot product calculation results were ignored. This may be an unintended call.")
-		EUCVECTORINLINE auto dot(const EuclideanCmplVector3<T>& vector) const noexcept(noexcept(x_ + x_) && noexcept(ElemType(ElemType(x_* vector.x_) + ElemType(y_ * vector.y_))))
-		-> decltype(ElemType(ElemType(x_* vector.x_) + ElemType(y_ * vector.y_)), x_ + x_) {
-		return ElemType(x_ * vector.x_) + ElemType(y_ * vector.y_) + ElemType(z_ * vector.z_);
+		EUCVECTORINLINE auto dot(const EuclideanCmplVector3<T>& vector) const noexcept(noexcept(x_* vector.x_ + x_ * vector.x_ + x_ * vector.x_))
+		-> decltype(x_* vector.x_ + x_ * vector.x_ + x_ * vector.x_) {
+		return x_ * vector.x_ + y_ * vector.y_ + z_ * vector.z_;
 	}
 	template<class T>
 	EUCNODISCARD_MSG("The dot product calculation results were ignored. This may be an unintended call.")
-		EUCVECTORINLINE auto dot(EuclideanCmplVector3<T>&& vector) const noexcept(noexcept(x_ + x_) && noexcept(ElemType(ElemType(x_* _STD move(vector.x_)) + y_ * ElemType(_STD move(vector.y_)))))
-		-> decltype(ElemType(ElemType(x_* _STD move(vector.x_)) + ElemType(y_ * _STD move(vector.y_))), x_ + x_) {
-		return ElemType(x_ * _STD move(vector.x_)) + ElemType(y_ * _STD move(vector.y_)) + ElemType(z_ * _STD move(vector.z_));
+		EUCVECTORINLINE auto dot(EuclideanCmplVector3<T>&& vector) const noexcept(noexcept(x_* _STD move(vector.x_) + x_ * _STD move(vector.x_) + x_ * _STD move(vector.x_)))
+		-> decltype(x_* _STD move(vector.x_) + x_ * _STD move(vector.x_) + x_ * _STD move(vector.x_)) {
+		return x_ * _STD move(vector.x_) + y_ * _STD move(vector.y_) + z_ * _STD move(vector.z_);
 	}
 	template<class T>
 	EUCNODISCARD_MSG("The dot product calculation results were ignored. This may be an unintended call.")
-		EUCVECTORINLINE auto dot(RRefPacker<T> pack) const noexcept(noexcept(x_ + x_) && noexcept(ElemType(ElemType(x_* _STD move(pack.x)) + ElemType(y_ * _STD move(pack.y)))))
-		-> decltype(ElemType(ElemType(x_* _STD move(pack.x)) + ElemType(y_ * _STD move(pack.y))), x_ + x_) {
-		return ElemType(x_ * _STD move(pack.x)) + ElemType(y_ * _STD move(pack.y)) + ElemType(z_ * _STD move(pack.z));
+		EUCVECTORINLINE auto dot(RRefPacker<T> pack) const noexcept(noexcept(x_* _STD move(pack.x) + x_ * _STD move(pack.x) + x_ * _STD move(pack.x)))
+		-> decltype(x_* _STD move(pack.x) + x_ * _STD move(pack.x) + x_ * _STD move(pack.x)) {
+		return x_ * _STD move(pack.x) + y_ * _STD move(pack.y) + z_ * _STD move(pack.z);
 	}
 	/*
 		@brief
@@ -5028,7 +5054,7 @@ public:
 	EUCNODISCARD_MSG("The norm squared calculation results were ignored. This may be an unintended call.")
 		EUCVECTORINLINE auto eucnorm_squared() const noexcept(noexcept(dot(_STD declval<LRefEucVector>())))
 		-> decltype(dot(_STD declval<LRefEucVector>())) {
-		return ElemType(x_ * vector.x_) + ElemType(y_ * vector.y_) + ElemType(z_ * vector.z_);
+		return x_ * x_ + y_ * y_ + z_ * z_;
 	}
 	/*
 		@brief
@@ -5042,7 +5068,7 @@ public:
 	EUCNODISCARD_MSG("The norm calculation results were ignored. This may be an unintended call.")
 		EUCVECTORINLINE auto eucnorm() const noexcept(noexcept(_STD sqrt(eucnorm_squared<T>())))
 		-> decltype(_STD sqrt(eucnorm_squared<T>())) {
-		return _STD sqrt(ElemType(x_ * vector.x_) + ElemType(y_ * vector.y_) + ElemType(z_ * vector.z_));
+		return _STD sqrt(x_ * x_ + y_ * y_ + z_ * z_);
 	}
 	/*
 		@brief
@@ -5355,35 +5381,35 @@ public:
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(const EuclideanCmplVector4<T>& right) const noexcept(noexcept(bool(!(w_ == right.w_))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(right)>>(), bool(!(w_ == right.w_)), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(right)>>(), bool(!(w_ == right.w_)), _STD declval<bool>())> {
 		return (!(x_ == right.x_)) || (!(y_ == right.y_)) || (!(z_ == right.z_)) || (!(w_ == right.w_));
 	}
 
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(EuclideanCmplVector4<T>&& right) const noexcept(noexcept(bool(!(w_ == _STD move(right.w_)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(w_ == _STD move(right.w_))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(w_ == _STD move(right.w_))), _STD declval<bool>())> {
 		return (!(x_ == _STD move(right.x_))) || (!(y_ == _STD move(right.y_))) || (!(z_ == _STD move(right.z_))) || (!(w_ == _STD move(right.w_)));
 	}
 
 	template<class T>
 	EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE auto operator!=(RRefPacker<T> right) const noexcept(noexcept(bool(!(w_ == _STD move(right.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(w_ == _STD move(right.x))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(*this), decltype(_STD move(right))>>(), bool(!(w_ == _STD move(right.x))), _STD declval<bool>())> {
 		return (!(x_ == _STD move(right.x))) || (!(y_ == _STD move(right.y))) || (!(z_ == _STD move(right.z))) || (!(w_ == _STD move(right.w)));
 	}
 
 	template<class T>
 	friend EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE static auto operator!=(RRefPacker<T> left, LRefConstEucVector right) noexcept(noexcept(bool(!(right.w_ == _STD move(left.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(_STD move(left)), decltype(right)>>(), bool(!(right.w_ == _STD move(left.x))), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(_STD move(left)), decltype(right)>>(), bool(!(right.w_ == _STD move(left.x))), _STD declval<bool>())> {
 		return (!(right.x_ == _STD move(left.x))) || (!(right.y_ == _STD move(left.y))) || (!(right.z_ == _STD move(left.z))) || (!(right.w_ == _STD move(left.w)));
 	}
 
 	template<class T>
 	friend EUCNODISCARD_MSG("The return value of the comparison operator is being ignored")
 		EUCVECTORINLINE static auto operator!=(RRefPacker<T> left, RRefEucVector right) noexcept(noexcept(bool(!(_STD move(right.x) == _STD move(left.x)))))
-		-> meta::no_ref<decltype(meta::cnd_type<!meta::is_not_equal_v<decltype(_STD move(left)), decltype(_STD move(right))>>(), bool(!(_STD move(right.w_)) == _STD move(left.x)), _STD declval<bool>())> {
+		-> meta::no_ref<decltype(meta::when_true<!meta::is_invoke_not_equal_v<decltype(_STD move(left)), decltype(_STD move(right))>>(), bool(!(_STD move(right.w_)) == _STD move(left.x)), _STD declval<bool>())> {
 		return (!(_STD move(right.x_) == _STD move(left.x))) || (!(_STD move(right.y_) == _STD move(left.y))) || (!(_STD move(right.z_) == _STD move(left.z))) || (!(_STD move(right.w_) == _STD move(left.w)));
 	}
 	/*
@@ -5466,7 +5492,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(const EuclideanCmplVector4<T>& vector) & noexcept(noexcept(w_ = w_ + vector.w_))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(vector)>>, w_ = w_ + vector.w_, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(vector)>>, w_ = w_ + vector.w_, _STD declval<LRefEucVector>()) {
 		x_ = x_ + vector.x_;
 		y_ = y_ + vector.y_;
 		z_ = z_ + vector.z_;
@@ -5476,7 +5502,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(EuclideanCmplVector4<T>&& vector) & noexcept(noexcept(w_ = w_ + _STD move(vector.w_)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, w_ = w_ + _STD move(vector.w_), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, w_ = w_ + _STD move(vector.w_), _STD declval<LRefEucVector>()) {
 		x_ = x_ + _STD move(vector.x_);
 		y_ = y_ + _STD move(vector.y_);
 		z_ = z_ + _STD move(vector.z_);
@@ -5486,7 +5512,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator+=(RRefPacker<T> pack) & noexcept(noexcept(w_ = w_ + _STD move(pack.x)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, w_ = w_ + _STD move(pack.x), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, w_ = w_ + _STD move(pack.x), _STD declval<LRefEucVector>()) {
 		x_ = x_ + _STD move(pack.x);
 		y_ = y_ + _STD move(pack.y);
 		z_ = z_ + _STD move(pack.z);
@@ -5526,7 +5552,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(const EuclideanCmplVector4<T>& vector) & noexcept(noexcept(w_ = w_ - vector.w_))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(vector)>>, w_ = w_ - vector.w_, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(vector)>>, w_ = w_ - vector.w_, _STD declval<LRefEucVector>()) {
 		x_ = x_ - vector.x_;
 		y_ = y_ - vector.y_;
 		z_ = z_ - vector.z_;
@@ -5536,7 +5562,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(EuclideanCmplVector4<T>&& vector) & noexcept(noexcept(w_ = w_ - _STD move(vector.w_)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, w_ = w_ - _STD move(vector.w_), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(vector))>>, w_ = w_ - _STD move(vector.w_), _STD declval<LRefEucVector>()) {
 		x_ = x_ - _STD move(vector.x_);
 		y_ = y_ - _STD move(vector.y_);
 		z_ = z_ - _STD move(vector.z_);
@@ -5546,7 +5572,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator-=(RRefPacker<T> pack) & noexcept(noexcept(w_ = w_ - _STD move(pack.x)))
-		-> decltype(meta::cnd_type<!meta::is_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, w_ = w_ - _STD move(pack.x), _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_add_equal_v<decltype(*this), decltype(_STD move(pack))>>, w_ = w_ - _STD move(pack.x), _STD declval<LRefEucVector>()) {
 		x_ = x_ - _STD move(pack.x);
 		y_ = y_ - _STD move(pack.y);
 		z_ = z_ - _STD move(pack.z);
@@ -5567,7 +5593,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator*=(T&& scl) & noexcept(noexcept(w_ = w_ * scl))
-		-> decltype(meta::cnd_type<!meta::is_mul_equal_v<decltype(*this), decltype(scl)>>, w_ = w_ * scl, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_mul_equal_v<decltype(*this), decltype(scl)>>, w_ = w_ * scl, _STD declval<LRefEucVector>()) {
 		x_ = x_ * scl;
 		y_ = y_ * scl;
 		z_ = z_ * scl;
@@ -5587,7 +5613,7 @@ public:
 
 	template<class T>
 	EUCVECTORINLINE auto operator/=(T&& scl) & noexcept(noexcept(w_ = w_ / scl))
-		-> decltype(meta::cnd_type<!meta::is_div_equal_v<decltype(*this), decltype(scl)>>, w_ = w_ / scl, _STD declval<LRefEucVector>()) {
+		-> decltype(meta::when_true<!meta::is_invoke_div_equal_v<decltype(*this), decltype(scl)>>, w_ = w_ / scl, _STD declval<LRefEucVector>()) {
 		x_ = x_ / scl;
 		y_ = y_ / scl;
 		z_ = z_ / scl;
@@ -6387,7 +6413,7 @@ public:
 	EUCNODISCARD_MSG("The reference has been discarded. This may be an unintended call.")
 		EUCVECTORINLINE Packer<ElemType> wwww() const noexcept { return { w_, w_, w_, w_ }; }
 	EUCNODISCARD_MSG("The output has been discarded. There may have been an unintended call.")
-		EUCVECTORINLINE Packer<ElemType> get_pack() const noexcept { return { x_,y_, z_, w_ }; }
+		EUCVECTORINLINE Packer<ElemType> xyzw() const noexcept { return { x_,y_, z_, w_ }; }
 #ifdef _MSC_VER
 #pragma endregion
 #endif
@@ -6431,21 +6457,21 @@ public:
 	*/
 	template<class T>
 	EUCNODISCARD_MSG("The dot product calculation results were ignored. This may be an unintended call.")
-		EUCVECTORINLINE auto dot(const EuclideanCmplVector4<T>& vector) const noexcept(noexcept(x_ + x_) && noexcept(ElemType(ElemType(x_* vector.x_) + ElemType(y_ * vector.y_))))
-		-> decltype(ElemType(ElemType(x_* vector.x_) + ElemType(y_ * vector.y_)), x_ + x_) {
-		return ElemType(x_ * vector.x_) + ElemType(y_ * vector.y_) + ElemType(z_ * vector.z_) + ElemType(w_ * vector.w_);
+		EUCVECTORINLINE auto dot(const EuclideanCmplVector4<T>& vector) const noexcept(noexcept(x_* vector.x_ + x_ * vector.x_ + x_ * vector.x_ + x_ * vector.x_))
+		-> decltype(x_* vector.x_ + x_ * vector.x_ + x_ * vector.x_ + x_ * vector.x_) {
+		return x_ * vector.x_ + y_ * vector.y_ + z_ * vector.z_ + w_ * vector.w_;
 	}
 	template<class T>
 	EUCNODISCARD_MSG("The dot product calculation results were ignored. This may be an unintended call.")
-		EUCVECTORINLINE auto dot(EuclideanCmplVector4<T>&& vector) const noexcept(noexcept(x_ + x_) && noexcept(ElemType(ElemType(x_* _STD move(vector.x_)) + y_ * ElemType(_STD move(vector.y_)))))
-		-> decltype(ElemType(ElemType(x_* _STD move(vector.x_)) + ElemType(y_ * _STD move(vector.y_))), x_ + x_) {
-		return ElemType(x_ * _STD move(vector.x_)) + ElemType(y_ * _STD move(vector.y_)) + ElemType(z_ * _STD move(vector.z_)) + ElemType(w_ * _STD move(vector.w_));
+		EUCVECTORINLINE auto dot(EuclideanCmplVector4<T>&& vector) const noexcept(noexcept(x_* _STD move(vector.x_) + x_ * _STD move(vector.x_) + x_ * _STD move(vector.x_) + x_ * _STD move(vector.x_)))
+		-> decltype(x_* _STD move(vector.x_) + x_ * _STD move(vector.x_) + x_ * _STD move(vector.x_) + x_ * _STD move(vector.x_)) {
+		return x_ * _STD move(vector.x_) + y_ * _STD move(vector.y_) + z_ * _STD move(vector.z_) + w_ * _STD move(vector.w_);
 	}
 	template<class T>
 	EUCNODISCARD_MSG("The dot product calculation results were ignored. This may be an unintended call.")
-		EUCVECTORINLINE auto dot(RRefPacker<T> pack) const noexcept(noexcept(x_ + x_) && noexcept(ElemType(ElemType(x_* _STD move(pack.x)) + ElemType(y_ * _STD move(pack.y)))))
-		-> decltype(ElemType(ElemType(x_* _STD move(pack.x)) + ElemType(y_ * _STD move(pack.y))), x_ + x_) {
-		return ElemType(x_ * _STD move(pack.x)) + ElemType(y_ * _STD move(pack.y)) + ElemType(z_ * _STD move(pack.z)) + ElemType(w_ * _STD move(pack.w));
+		EUCVECTORINLINE auto dot(RRefPacker<T> pack) const noexcept(noexcept(x_* _STD move(pack.x) + x_ * _STD move(pack.x) + x_ * _STD move(pack.x) + x_ * _STD move(pack.x)))
+		-> decltype(x_* _STD move(pack.x) + x_ * _STD move(pack.x) + x_ * _STD move(pack.x) + x_ * _STD move(pack.x)) {
+		return x_ * _STD move(pack.x) + y_ * _STD move(pack.y) + z_ * _STD move(pack.z) + w_ * _STD move(pack.w);
 	}
 	/*
 		@brief
@@ -6459,7 +6485,7 @@ public:
 	EUCNODISCARD_MSG("The norm squared calculation results were ignored. This may be an unintended call.")
 		EUCVECTORINLINE auto eucnorm_squared() const noexcept(noexcept(dot(_STD declval<LRefEucVector>())))
 		-> decltype(dot(_STD declval<LRefEucVector>())) {
-		return (x_ * x_) + (y_ * y_) + (z_ * z_) + (w_ * w_);
+		return x_ * x_ + y_ * y_ + z_ * z_ + w_ * w_;
 	}
 	/*
 		@brief
@@ -6473,7 +6499,7 @@ public:
 	EUCNODISCARD_MSG("The norm calculation results were ignored. This may be an unintended call.")
 		EUCVECTORINLINE auto eucnorm() const noexcept(noexcept(_STD sqrt(eucnorm_squared<T>())))
 		-> decltype(_STD sqrt(eucnorm_squared<T>())) {
-		return _STD sqrt((x_ * x_) + (y_ * y_) + (z_ * z_) + (w_ * w_));
+		return _STD sqrt(x_ * x_ + y_ * y_ + z_ * z_ + w_ * w_);
 	}
 	/*
 		@brief
@@ -6500,6 +6526,80 @@ public:
 		return *this /= eucnorm<T>();
 	}
 
+};
+
+/*
+	Literals. 
+*/
+inline namespace literals {
+
+	EUCNODISCARD EUCVECTORINLINE 
+		constexpr detail::ResultPacker_1<long long int> operator"" _llieuc1(unsigned long long int v) {
+		return { static_cast<long long int>(v) };
+	}
+	EUCNODISCARD EUCVECTORINLINE 
+		constexpr detail::ResultPacker_1<int> operator"" _ieuc1(unsigned long long int v) {
+		return { static_cast<int>(v) };
+	}
+	EUCNODISCARD EUCVECTORINLINE
+		constexpr detail::ResultPacker_1<long double> operator"" _deuc1(long double v){
+		return {v};
+	}
+	EUCNODISCARD EUCVECTORINLINE
+		constexpr detail::ResultPacker_1<float> operator"" _feuc1(long double v){
+		return {static_cast<float>(v)};
+	}
+
+	EUCNODISCARD EUCVECTORINLINE 
+		constexpr detail::ResultPacker_2<long long int> operator"" _llieuc2(unsigned long long int v) {
+		return { static_cast<long long int>(v),static_cast<long long int>(v) };
+	}
+	EUCNODISCARD EUCVECTORINLINE 
+		constexpr detail::ResultPacker_2<int> operator"" _ieuc2(unsigned long long int v) {
+		return { static_cast<int>(v),static_cast<int>(v) };
+	}
+	EUCNODISCARD EUCVECTORINLINE
+		constexpr detail::ResultPacker_2<long double> operator"" _deuc2(long double v){
+		return {v,v};
+	}
+	EUCNODISCARD EUCVECTORINLINE
+		constexpr detail::ResultPacker_2<float> operator"" _feuc2(long double v){
+		return {static_cast<float>(v),static_cast<float>(v) };
+	}
+
+	EUCNODISCARD EUCVECTORINLINE 
+		constexpr detail::ResultPacker_3<long long int> operator"" _llieuc3(unsigned long long int v) {
+		return { static_cast<long long int>(v),static_cast<long long int>(v),static_cast<long long int>(v) };
+	}
+	EUCNODISCARD EUCVECTORINLINE 
+		constexpr detail::ResultPacker_3<int> operator"" _ieuc3(unsigned long long int v) {
+		return { static_cast<int>(v),static_cast<int>(v),static_cast<int>(v) };
+	}
+	EUCNODISCARD EUCVECTORINLINE
+		constexpr detail::ResultPacker_3<long double> operator"" _deuc3(long double v){
+		return {v,v,v};
+	}
+	EUCNODISCARD EUCVECTORINLINE
+		constexpr detail::ResultPacker_3<float> operator"" _feuc3(long double v){
+		return {static_cast<float>(v),static_cast<float>(v),static_cast<float>(v) };
+	}
+
+	EUCNODISCARD EUCVECTORINLINE 
+		constexpr detail::ResultPacker_4<long long int> operator"" _llieuc4(unsigned long long int v) {
+		return { static_cast<long long int>(v),static_cast<long long int>(v),static_cast<long long int>(v),static_cast<long long int>(v) };
+	}
+	EUCNODISCARD EUCVECTORINLINE 
+		constexpr detail::ResultPacker_4<int> operator"" _ieuc4(unsigned long long int v) {
+		return { static_cast<int>(v),static_cast<int>(v),static_cast<int>(v),static_cast<int>(v) };
+	}
+	EUCNODISCARD EUCVECTORINLINE
+		constexpr detail::ResultPacker_4<long double> operator"" _deuc4(long double v){
+		return {v,v,v,v};
+	}
+	EUCNODISCARD EUCVECTORINLINE
+		constexpr detail::ResultPacker_4<float> operator"" _feuc4(long double v){
+		return {static_cast<float>(v),static_cast<float>(v),static_cast<float>(v),static_cast<float>(v) };
+	}
 };
 
 /*
@@ -6563,7 +6663,6 @@ using EucCmplDoubleVector3 = EuclideanCmplVector3<double>;
 using EucCmplDoubleVector4 = EuclideanCmplVector4<double>;
 
 //name space end.
-};
 };
 
 #endif 
